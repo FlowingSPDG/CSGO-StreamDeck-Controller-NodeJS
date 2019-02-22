@@ -1,0 +1,22 @@
+{
+  "name": "nodejs-streamdeck-pgl-gsi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FlowingSPDG/NodeJS-StreamDeck-pgl-gsi.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FlowingSPDG/NodeJS-StreamDeck-pgl-gsi/issues"
+  },
+  "homepage": "https://github.com/FlowingSPDG/NodeJS-StreamDeck-pgl-gsi#readme",
+  "dependencies": {
+    "elgato-stream-deck": "^2.1.1"
+  }
+}
