@@ -8,9 +8,28 @@ const StreamDeck = require('elgato-stream-deck');
 // Device paths can be obtained via node-hid: https://github.com/node-hid/node-hid
 const myStreamDeck = new StreamDeck();
 
+var binds = [
+	"echo first bind!",
+	"echo second bind!",
+	"echo third bind!",
+	"echo its four,maybe enough...?"
+	
+	//
+	// you can bind some commands here
+	// e.g.
+	// "spec_goto 0 0 0 0 0;spec_lerpto 10 10 10 10 10 2 2"
+	// 
+]
 myStreamDeck.on('down', keyIndex => {
-	console.log('key %d down', keyIndex);
-	ws.send(new Uint8Array(Buffer.from('exec\0'+ "echo StreamDeck key " + keyIndex + "Pressed" +'\0','utf8')),{binary: true});
+	//console.log('key %d down', keyIndex);
+	//ws.send(new Uint8Array(Buffer.from('exec\0'+ "echo StreamDeck key " + keyIndex + " Pressed" +'\0','utf8')),{binary: true});
+	if(ws){
+		ws.send(new Uint8Array(Buffer.from('exec\0'+ binds[keyIndex] +'\0','utf8')),{binary: true});
+		console.log('executed command : %s', binds[keyIndex]);
+	}
+	else{
+		console.log("Please link csgo client first");
+	}
 });
 
 myStreamDeck.on('up', keyIndex => {
@@ -22,25 +41,6 @@ myStreamDeck.on('up', keyIndex => {
 myStreamDeck.on('error', error => {
 	console.error(error);
 });
-
-/*
-  Prerequisites:
-
-    1. Install node.js and npm
-    2. npm install ws
-
-  See also,
-
-    http://einaros.github.com/ws/
-
-  To run,
-
-    node server.js
-
-  Hint:
-
-    Text entered (with enter) is sent to client as exec.
-*/
 
 "use strict"; // http://ejohn.org/blog/ecmascript-5-strict-mode-json-and-more/
 
