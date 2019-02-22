@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/FlowingSPDG/NodeJS-StreamDeck-pgl-gsi#readme",
   "dependencies": {
-    "elgato-stream-deck": "^2.1.1"
+    "Console": "^1.1.0",
+    "elgato-stream-deck": "^2.1.1",
+    "ws": "^6.1.4"
   }
 }

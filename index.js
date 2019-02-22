@@ -10,6 +10,7 @@ const myStreamDeck = new StreamDeck();
 
 myStreamDeck.on('down', keyIndex => {
 	console.log('key %d down', keyIndex);
+	ws.send(new Uint8Array(Buffer.from('exec\0'+ "echo StreamDeck key " + keyIndex + "Pressed" +'\0','utf8')),{binary: true});
 });
 
 myStreamDeck.on('up', keyIndex => {
@@ -22,12 +23,195 @@ myStreamDeck.on('error', error => {
 	console.error(error);
 });
 
-// Fill the second button from the left in the first row with an image of the GitHub logo.
-// This is asynchronous and returns a promise.
-myStreamDeck.fillImageFromFile(3, path.resolve(__dirname, 'github_logo.png')).then(() => {
-	console.log('Successfully wrote a GitHub logo to key 3.');
+/*
+  Prerequisites:
+
+    1. Install node.js and npm
+    2. npm install ws
+
+  See also,
+
+    http://einaros.github.com/ws/
+
+  To run,
+
+    node server.js
+
+  Hint:
+
+    Text entered (with enter) is sent to client as exec.
+*/
+
+"use strict"; // http://ejohn.org/blog/ecmascript-5-strict-mode-json-and-more/
+
+var readline = require('readline')
+  , events = require('events')
+  , util = require('util')
+  , WebSocketServer = require('ws').Server
+  , http = require('http');
+
+function Console() {
+  if (!(this instanceof Console)) return new Console();
+
+  this.stdin = process.stdin;
+  this.stdout = process.stdout;
+
+  this.readlineInterface = readline.createInterface(this.stdin, this.stdout);
+
+  var self = this;
+
+  this.readlineInterface.on('line', function line(data) {
+    self.emit('line', data);
+  }).on('close', function close() {
+    self.emit('close');
+  });
+}
+
+util.inherits(Console, events.EventEmitter);
+
+Console.prototype.print = function print(msg) {
+   this.stdout.write(msg + '\n');
+};
+
+var ws = null;
+var wsConsole = new Console();
+var server = http.createServer();
+var wss = new WebSocketServer({server: server, path: '/mirv'});
+
+wsConsole.on('close', function close() {
+  if (ws) ws.close();
+  process.exit(0);
 });
 
-// Fill the first button form the left in the first row with a solid red color. This is synchronous.
-myStreamDeck.fillColor(4, 255, 0, 0);
-console.log('Successfully wrote a red square to key 4.');
+wsConsole.on('line', function line(data) {
+  if (ws) {
+    ws.send(new Uint8Array(Buffer.from('exec\0'+data.trim()+'\0','utf8')),{binary: true});
+  }
+});
+
+wss.on('connection', function(newWs) {
+	if(ws)
+	{
+		ws.close();
+		ws = newWs;
+	}
+	
+	ws = newWs;
+    
+	wsConsole.print('/mirv	 connected');
+	
+    ws.on('message', function(data) {
+        if (data instanceof Buffer)
+		{
+			var buffer = Buffer.from(data);
+			var idx = 0;
+			while(idx < buffer.length)
+			{
+				function findDelim(buffer,idx)
+				{
+					var delim = -1;
+					for(var i = idx; i < buffer.length; ++i)
+					{
+						if(0 == buffer[i])
+						{
+							delim = i;
+							break;
+						}
+					}
+					
+					return delim;
+				}
+				
+				var delim = findDelim(buffer,idx);
+				
+				try
+				{
+					if(idx <= delim)
+					{
+						var cmd = buffer.toString('utf8',idx,delim);
+						idx = delim + 1;
+						wsConsole.print(cmd);
+						switch(cmd)
+						{
+						case 'hello':
+							if(4 <= buffer.length -idx)
+							{
+								var version = buffer.readUInt32LE(idx);
+								wsConsole.print('version = '+version);
+								idx += 4;
+								if(2 == version)
+									continue;
+							}
+							break;
+						case 'dataStart':
+							continue;
+							break;
+						case 'dataStop':
+							continue;
+							break;
+						case 'levelInit':
+							{
+								var delim = findDelim(buffer, idx);
+								if(idx <= delim)
+								{
+									var map = buffer.toString('utf8',idx,delim);
+									wsConsole.print('map = '+map);
+									idx = delim + 1;
+									continue;
+								}
+							}
+							break;
+						case 'levelShutdown':
+							continue;
+							break;
+						case 'cam':
+							if(8*4 <= buffer.length -idx)
+							{
+								var time = buffer.readFloatLE(idx);
+								wsConsole.print('time = '+time);
+								idx += 4;
+								var xPosition = buffer.readFloatLE(idx);
+								wsConsole.print('xPosition = '+xPosition);
+								idx += 4;
+								var yPosition = buffer.readFloatLE(idx);
+								wsConsole.print('yPosition = '+yPosition);
+								idx += 4;
+								var zPosition = buffer.readFloatLE(idx);
+								wsConsole.print('zPosition = '+zPosition);
+								idx += 4;
+								var xRotation = buffer.readFloatLE(idx);
+								wsConsole.print('xRotation = '+xRotation);
+								idx += 4;
+								var yRotation = buffer.readFloatLE(idx);
+								wsConsole.print('yRotation = '+yRotation);
+								idx += 4;
+								var zRotation = buffer.readFloatLE(idx);
+								wsConsole.print('zRotation = '+zRotation);
+								idx += 4;
+								var fov = buffer.readFloatLE(idx);
+								wsConsole.print('fov = '+fov);
+								idx += 4;
+								continue;
+							}
+							break;
+						}
+					}
+				}
+				catch(err)
+				{
+					wsConsole.print('Error: '+err+'.');
+				}
+			
+				wsConsole.print('Error: Invalid data received at index '+idx+'.');
+				break;
+			}
+		}
+    });
+    ws.on('close', function() {
+      wsConsole.print('Connection closed!');
+    });
+    ws.on('error', function(e) {
+    });
+});
+server.listen(31337);
+wsConsole.print('Listening on port 31337, path /mirv ...');
